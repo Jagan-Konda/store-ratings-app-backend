@@ -14,7 +14,7 @@ const dbPath = path.join(__dirname, './storeRatings.db')
 const app = express()
 app.use(express.json())
 
-const allowedOrigins = ['http://localhost:3000'];
+const allowedOrigins = ['http://localhost:3000', 'https://storesrating.netlify.app/'];
 
 // CORS options
 const corsOptions = {
@@ -313,10 +313,17 @@ app.get('/user/stores', authenticateToken, async (request, response) => {
     const { order_by = 'store.id' } = query
     const userId = await db.get(`SELECT id FROM user WHERE email='${email}'`)
     const queryToGetListOfStores = `
-        SELECT store.id, store.name, store.email, store.address, IFNULL(AVG(ratings.rating), 0) AS rating, (SELECT rating FROM ratings WHERE user_id = ${userId.id}) AS user_rating
-        FROM store LEFT JOIN ratings ON store.id = ratings.store_id
-        GROUP BY store.id
-        ORDER BY ${order_by};
+        SELECT 
+                store.id, 
+                store.name, 
+                store.email, 
+                store.address,
+                IFNULL(AVG(ratings.rating), 0) AS average_rating,
+                (SELECT rating FROM ratings WHERE ratings.user_id = ? AND ratings.store_id = store.id) AS user_rating
+            FROM store
+            LEFT JOIN ratings ON store.id = ratings.store_id
+            GROUP BY store.id
+            ORDER BY ${order_by};
     `
     const dbResponse = await db.all(queryToGetListOfStores)
 
