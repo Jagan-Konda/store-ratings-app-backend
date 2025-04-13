@@ -30,7 +30,7 @@ let db = null
 const creatingAdmin = async () => {
     const adminUser = await db.all(`SELECT * FROM user WHERE role = 'Admin'`)
     if (adminUser.length === 0) {
-        const adminHashedPassword = await bcrypt.hash("jagan@admin", 10)
+        const adminHashedPassword = await bcrypt.hash("Jagan@admin", 10)
 
         const queryToInsertAdminUser = `
             INSERT INTO user (name, email, password, address, role)
@@ -41,6 +41,7 @@ const creatingAdmin = async () => {
 
     } else {
         console.log("Admin already exists")
+        console.log(adminUser)
     }
 }
 
