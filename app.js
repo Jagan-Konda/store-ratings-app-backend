@@ -26,27 +26,6 @@ app.use(cors(corsOptions));
 
 let db = null
 
-//Add Admin User
-const creatingAdmin = async () => {
-    const adminUser = await db.all(`SELECT * FROM user WHERE role = 'Admin'`)
-    if (adminUser.length === 0) {
-        const adminHashedPassword = await bcrypt.hash("Jagan@admin", 10)
-
-        const queryToInsertAdminUser = `
-            INSERT INTO user (name, email, password, address, role)
-            VALUES ('Jagan Kumar Konda Admin', 'jagan@gmail.com', '${adminHashedPassword}', 'Hyderabad','Admin')
-        `
-        await db.run(queryToInsertAdminUser)
-        console.log(" Admin created successfully");
-
-    } else {
-        console.log("Admin already exists")
-        console.log(adminUser)
-    }
-}
-
-
-
 //Initializing DB and Server 
 
 const initializeDBAndServer = async () => {
@@ -56,7 +35,6 @@ const initializeDBAndServer = async () => {
             driver: sqlite3.Database
         })
 
-        await creatingAdmin()
 
         app.listen(3000, () => console.log("Server Running Successfully!"))
     } catch (e) {
@@ -74,7 +52,7 @@ initializeDBAndServer()
 app.post("/signup", async (request, response) => {
     const { name, email, password, address } = request.body;
     const hashedPassword = await bcrypt.hash(password, 10);
-    const selectUserQuery = `SELECT * FROM user WHERE email = '${email}'`;
+    const selectUserQuery = `SELECT * FROM user WHERE email = '${email}';`;
     const dbUser = await db.get(selectUserQuery);
     if (dbUser === undefined) {
         const createUserQuery = `
@@ -108,6 +86,7 @@ app.post('/login', async (request, response) => {
       WHERE email = '${email}';
     `
     const dbUser = await db.get(queryToCheckUser)
+
     if (dbUser === undefined) {
         response.status(400).json({ error: 'Invalid user' });
     } else {
