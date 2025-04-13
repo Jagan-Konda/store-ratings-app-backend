@@ -218,7 +218,7 @@ app.post('/admin/add-store', authenticateToken, authorizeAdmin, async (request, 
         const dbResponse = db.all(queryToCheckIfUserAlreadyHadAStore)
 
         if (dbResponse.length !== 0) {
-            return response.send('User Already Had A Store')
+            return response.send({error: 'User Already Had A Store'})
         }
     }
 
