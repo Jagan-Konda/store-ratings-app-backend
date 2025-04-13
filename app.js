@@ -94,10 +94,11 @@ app.post('/login', async (request, response) => {
         if (isPasswordMatched) {
             const payload = { email: email }
             const jwtToken = jwt.sign(payload, 'SECRET')
-            const jwtTokenObj = {
-                jwtToken: jwtToken,
+            const responseObj = {
+                jwt_token: jwtToken,
+                role: dbUser.role
             }
-            response.status(200).json(jwtTokenObj);
+            response.status(200).json(responseObj);
         } else {
             response.status(400).json({ error: 'Invalid password' });
         }
