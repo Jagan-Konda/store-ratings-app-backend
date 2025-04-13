@@ -314,16 +314,17 @@ app.get('/user/stores', authenticateToken, async (request, response) => {
     const userId = await db.get(`SELECT id FROM user WHERE email='${email}'`)
     const queryToGetListOfStores = `
         SELECT 
-                store.id, 
-                store.name, 
-                store.email, 
-                store.address,
-                IFNULL(AVG(ratings.rating), 0) AS average_rating,
-                (SELECT rating FROM ratings WHERE ratings.user_id = ? AND ratings.store_id = store.id) AS user_rating
-            FROM store
-            LEFT JOIN ratings ON store.id = ratings.store_id
-            GROUP BY store.id
-            ORDER BY ${order_by};
+            s.name AS store_name,
+            s.email AS store_email,
+            s.address,
+            AVG(r.rating) AS average_rating,
+            ur.rating AS user_rating
+        FROM 
+            Store s
+        LEFT JOIN Ratings r ON s.id = r.store_id
+        LEFT JOIN Ratings ur ON s.id = ur.store_id AND ur.user_id = ${userId.id}
+        GROUP BY 
+            s.id;
     `
     const dbResponse = await db.all(queryToGetListOfStores)
 
