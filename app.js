@@ -26,6 +26,23 @@ app.use(cors(corsOptions));
 
 let db = null
 
+//Add Admin User
+const creatingAdmin = async () => {
+    const adminUser = await db.all(`SELECT * FROM user WHERE role = 'Admin'`)
+    if (adminUser.length === 0) {
+        const adminHashedPassword = await bcrypt.hash("jagan@admin")
+
+        const queryToInsertAdminUser = `
+            INSERT INTO user (name, email, password, address, role)
+            VALUES ('Jagan Kumar Konda Admin', 'jagan@gmail.com', '${adminHashedPassword}', 'Hyderabad','Admin')
+        `
+        await db.run(queryToInsertAdminUser)
+
+    }
+}
+
+
+
 //Initializing DB and Server 
 
 const initializeDBAndServer = async () => {
@@ -35,6 +52,8 @@ const initializeDBAndServer = async () => {
             driver: sqlite3.Database
         })
 
+        await creatingAdmin()
+
         app.listen(3000, () => console.log("Server Running Successfully!"))
     } catch (e) {
         console.log(`DB Error: ${e.message}`)
@@ -43,6 +62,8 @@ const initializeDBAndServer = async () => {
 }
 
 initializeDBAndServer()
+
+
 
 //Register A User API
 
