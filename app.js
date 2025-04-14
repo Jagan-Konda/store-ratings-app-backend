@@ -284,25 +284,38 @@ app.get('/admin/users', authenticateToken, authorizeAdmin, async (request, respo
 //API To Update A Normal User's Password
 
 app.put('/user/update-password', authenticateToken, async (request, response) => {
-    const { email, newPassword } = request.body
+    const { email } = request
+    const { newPassword } = request.body
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    const newHashedPassword = await bcrypt.hash(newPassword, 10)
 
     const queryToGetTheUser = `
-        SELECT id
+        SELECT id, password
         FROM user
         WHERE email = '${email}';
     `
-    const userId = await db.get(queryToGetTheUser)
+    const user = await db.get(queryToGetTheUser)
 
-    const queryToUpdatePassword = `
+    const { password, id } = user
+
+
+    const userId = id
+
+    const isSamePassword = await bcrypt.compare(newPassword, password);
+
+    if (isSamePassword) {
+        response.status(400).json({ error: 'New password must be different from the current password.' })
+    } else {
+        const queryToUpdatePassword = `
         UPDATE user
-        SET password = '${hashedPassword}'
-        WHERE id = ${userId.id};
+        SET password = '${newHashedPassword}'
+        WHERE id = ${userId};
     `
 
-    const dbResponse = await db.run(queryToUpdatePassword)
-    response.send('Password Updated Successfully')
+        const dbResponse = await db.run(queryToUpdatePassword)
+        response.status(200).json({ message: 'Password Updated Successfully' })
+    }
+
 
 })
 
@@ -314,6 +327,7 @@ app.get('/user/stores', authenticateToken, async (request, response) => {
     const userId = await db.get(`SELECT id FROM user WHERE email='${email}'`)
     const queryToGetListOfStores = `
         SELECT 
+        s.id,
         s.name,
         s.email,
         s.address,
@@ -334,52 +348,67 @@ app.get('/user/stores', authenticateToken, async (request, response) => {
 
 //API to Submit a rating by a normal user
 
-app.post('/user/submit-rating/:id', authenticateToken, async (request, response) => {
-    const { email, params } = request
-    const { rating } = request.body
-    const { id } = params
+app.post('/user/submit-rating', authenticateToken, async (request, response) => {
+    const { email } = request
+    const { rating, id } = request.body
 
-    const userId = await db.get(`SELECT id FROM user where email='${email}'`)
+    const user = await db.get(`SELECT id FROM user where email='${email}'`)
+    const userId = user.id
     const storeId = id
+
 
     const queryToCheckIsRatingAlreadyGiven = `
         SELECT *
         FROM ratings
-        WHERE user_id = ${userId.id} AND store_id = ${storeId}
+        WHERE user_id = ${userId} AND store_id = ${storeId}
     `
     const isRatingAlreadyGiven = await db.all(queryToCheckIsRatingAlreadyGiven)
 
     if (isRatingAlreadyGiven.length !== 0) {
-        return response.status(401).send('Rating Already Given')
+        return response.status(409).json({ error: 'Rating Already Given' })
     }
 
     const queryToSubmitARating = `
         INSERT INTO ratings (user_id, store_id, rating)
-        VALUES (${userId.id}, ${storeId}, ${rating})
+        VALUES (${userId}, ${storeId}, ${rating})
     `
 
     const dbResponse = await db.run(queryToSubmitARating)
-    response.send('Rating Submitted Successfully!')
+    response.status(200).json({ message: 'Rating Submitted Successfully!' })
 })
 
 //API To Update Submitted Rating
 
-app.put('/user/update-rating/:id', authenticateToken, async (request, response) => {
-    const { email, params } = request
-    const { rating } = request.body
-    const { id } = params
+app.put('/user/update-rating', authenticateToken, async (request, response) => {
+    const { email } = request
+    const { rating, id } = request.body
 
-    const userId = await db.get(`SELECT id FROM user WHERE email='${email}'`)
+    const user = await db.get(`SELECT id FROM user WHERE email='${email}'`)
+    const userId = user.id
     const storeId = id
+
+    const queryToGetPreviousRating = `
+        SELECT *
+        FROM ratings
+        WHERE user_id = ${userId} AND store_id = ${storeId}
+    `
+
+    const previousRatingRow = await db.get(queryToGetPreviousRating)
+
+    const isNewRatingIsSameAsPreviousRating = rating === previousRatingRow.rating
+
+    if (isNewRatingIsSameAsPreviousRating) {
+        return response.status(409).json({ error: 'Given Rating Is Same As Previous Rating.' })
+    }
 
     const queryToSubmitARating = `
         UPDATE ratings 
         SET rating =  ${rating}
-        WHERE store_id = ${storeId} AND user_id = ${userId.id};
+        WHERE store_id = ${storeId} AND user_id = ${userId};
     `
 
     const dbResponse = await db.run(queryToSubmitARating)
-    response.send('Rating Updated Successfully!')
+    response.status(200).json({ message: 'Rating Updated Successfully!' })
 })
 
 //API TO GET A LIST OF USERS WHO SUBMITTED RATING TO THE STORE
@@ -391,9 +420,9 @@ app.get('/store-owner/ratings', authenticateToken, async (request, response) => 
     const storeId = store.id
 
     const queryToGetListOfRatingsOfAStore = `
-        SELECT user.name, ratings.rating, (SELECT AVG(rating) FROM ratings WHERE store_id = ${storeId}) AS avg_rating
+        SELECT user.id, user.address, user.email, user.name, ratings.rating
         FROM ratings LEFT JOIN user ON ratings.user_id = user.id 
-        
+        WHERE store_id = ${storeId};
     `
 
     const dbResponse = await db.all(queryToGetListOfRatingsOfAStore)
