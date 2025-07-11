@@ -14,7 +14,7 @@ const dbPath = path.join(__dirname, './storeRatings.db')
 const app = express()
 app.use(express.json())
 
-const allowedOrigins = ['http://localhost:3000', 'https://storesrating.netlify.app'];
+const allowedOrigins = ['http://localhost:3000', 'https://storesrating.netlify.app','https://roxilerfrontend310.netlify.app'];
 
 // CORS options
 const corsOptions = {
